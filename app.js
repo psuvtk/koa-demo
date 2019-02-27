@@ -1,39 +1,53 @@
 const Koa = require("koa");
 const Router = require("koa-router");
 
-const DB = require("./module/db");
-
-const views = require("koa-views");
-const serve = require("koa-static");
-
 const app = new Koa();
 const router = new Router();
 
+const views = require("koa-views");
+const serve = require("koa-static");
+const session = require("koa-session");
+
+const index = require("./routes/index");
+const api = require("./routes/api");
+const admin = require("./routes/admin");
+
+router.use(index);
+router.use("/api", api);
+router.use("/admin", admin);
+
+const DB = require("./module/db").default;
+
+app.keys = ["some secret hurr"];
+
+const CONFIG = {
+    key: "koa:sess",
+    maxAge: 86400,
+    autoCommit: true,
+    overwrite: true,
+    httpOnly: true,
+    signed: true,
+    rolling: false,
+    renew: true
+};
+
+// session 中间件
+app.use(session(CONFIG, app));
+
 // 视图中间件
 app.use(
-  views("views", {
-    extension: "ejs"
-  })
+    views("views", {
+        extension: "ejs"
+    })
 );
 
 // 静态资源中间件
 app.use(serve(__dirname + "/static"));
+app.use(serve(__dirname + "/public"));
 
-router.get("/", async ctx => {
-  let title = "Hello ejs";
-  await ctx.render("index", {
-    title: title
-  });
-});
 
-router.get("/news", async ctx => {
-  ctx.body = "news";
-  console.log(ctx.header);
-});
 
-router.get("/pictures", async ctx => {
-    ctx.body = "API 用来获取所有图片"
-});
+
 
 app.use(router.routes()).use(router.allowedMethods());
 
